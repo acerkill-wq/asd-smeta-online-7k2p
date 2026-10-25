@@ -94,6 +94,9 @@ tr.flash td{animation:fl 1.6s}@keyframes fl{from{background:#ff2c6955}to{backgro
     <label>Площадь помещений, м²</label><input id="pArea" type="number" value="92">
     <label>Состав работ (выберите)</label>
     <select id="pWorks" multiple size="4"><option selected>Демонтаж</option><option selected>Полы</option><option selected>Стены и потолки</option><option>Электрика</option></select>
+    <label>Заказчик (для КС-2, КС-3)</label><input id="pZak" placeholder="Организация, адрес">
+    <label>Подрядчик (для КС-2, КС-3)</label><input id="pPod" placeholder="Организация, адрес">
+    <label>Договор подряда: номер и дата</label><input id="pDog" placeholder="№ 12 от 01.10.2026">
     <label style="display:flex;gap:8px;align-items:center"><input id="pNds" type="checkbox" style="width:auto" checked> НДС 20%</label>
     <button class="btn full" id="gen">Сформировать смету</button>
   </div>
@@ -102,7 +105,9 @@ tr.flash td{animation:fl 1.6s}@keyframes fl{from{background:#ff2c6955}to{backgro
     <div class="bar">
       <h3 style="margin:0">2. Локальный сметной расчёт (ЛСР)</h3><span class="chip warn" id="mChip">РИМ</span><span class="sp"></span>
       <button class="btn ghost sm" data-ex="xml">Экспорт XML</button>
-      <button class="btn ghost sm" data-ex="xls">Печать в Excel</button>
+      <button class="btn ghost sm" data-ex="lsr" title="Приложение № 3 к Методике 421/пр (РИМ)">ЛСР · Excel</button>
+      <button class="btn ghost sm" data-ex="ks2" title="Унифицированная форма № КС-2 (ОКУД 0322005)">КС-2 · Excel</button>
+      <button class="btn ghost sm" data-ex="ks3" title="Унифицированная форма № КС-3 (ОКУД 0322001)">КС-3 · Excel</button>
     </div>
     <div id="estWrap"><div class="empty">Заполните параметры слева и нажмите «Сформировать смету».<br>Дальше правки вносятся через чат справа.</div></div>
   </div>
@@ -147,6 +152,7 @@ tr.flash td{animation:fl 1.6s}@keyframes fl{from{background:#ff2c6955}to{backgro
 </main>
 <div class="foot">АСД · Академия Сметного Дела · прототип сервиса</div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
 <script>
 const $=s=>document.querySelector(s), fmt=n=>n.toLocaleString('ru-RU',{minimumFractionDigits:2,maximumFractionDigits:2});
 // каталог условных позиций: fot, mat, mach — цена за единицу в базисе, ×индекс региона
@@ -170,11 +176,11 @@ function build(){
 }
 function addItem(k,q){const c=CAT[k];S.items.push({k,qty:q,idx:/ремон|стяж|штук/.test(c.name.toLowerCase())?1.0:1.0})}
 function render(){
-  const ix=idx(); let n=0,html='',sec='',dir=0,fot=0,mat=0,mach=0;
+  const ix=idx(); let n=0,html='',sec='',dir=0,fot=0,mat=0,mach=0; S.calc=[];
   S.items.sort((a,b)=>CAT[a.k].sec.localeCompare(CAT[b.k].sec,'ru'));
   S.items.forEach(it=>{const c=CAT[it.k];
     if(c.sec!==sec){sec=c.sec;html+=`<tr class="sec"><td colspan="7">Раздел: ${sec}</td></tr>`}
-    n++; const price=(c.fot+c.mat+c.mach)*ix, sum=price*it.qty; dir+=sum; fot+=c.fot*ix*it.qty; mat+=c.mat*ix*it.qty; mach+=c.mach*ix*it.qty;
+    n++; const price=(c.fot+c.mat+c.mach)*ix, sum=price*it.qty; S.calc.push({c,qty:it.qty,ix,ot:c.fot*ix*it.qty,em:c.mach*ix*it.qty,mt:c.mat*ix*it.qty,direct:sum}); dir+=sum; fot+=c.fot*ix*it.qty; mat+=c.mat*ix*it.qty; mach+=c.mach*ix*it.qty;
     const rimTag=(S.rim&&c.mat>1000)?' <span class="rim" title="В ФГИС ЦС нет цены, применён индекс к группе ресурсов">индекс РИМ</span>':'';
     html+=`<tr data-k="${it.k}" class="${S.added===it.k?'flash':''}"><td>${n}</td><td class="code">${c.code}</td><td>${c.name}${rimTag}</td><td>${c.unit}</td><td class="n">${it.qty}</td><td class="n">${fmt(price)}</td><td class="n">${fmt(sum)}</td></tr>`;
   });
@@ -237,13 +243,133 @@ $('#qsugg').innerHTML=['Что делать, если во ФГИС ЦС нет 
 $('#qsugg').onclick=e=>{if(e.target.tagName==='BUTTON')qa(e.target.textContent)};
 function qsend(){const v=$('#qinp').value.trim();if(v){$('#qinp').value='';qa(v)}}
 $('#qgo').onclick=qsend;$('#qinp').onkeydown=e=>{if(e.key==='Enter')qsend()};
+// ===== Excel по утверждённым формам =====
+const THIN={style:'thin'},BRD={top:THIN,left:THIN,bottom:THIN,right:THIN},NUM='#,##0.00',D2=n=>String(n).padStart(2,'0');
+function cell(ws,r,c,v,o={}){const x=ws.getCell(r,c);x.value=v;x.font={name:'Arial',size:o.size||9,bold:!!o.b,italic:!!o.i};
+  x.alignment={vertical:'middle',horizontal:o.h||(typeof v==='number'?'right':'left'),wrapText:o.wrap!==false};
+  if(o.bd)x.border=BRD; if(o.ul)x.border={bottom:THIN}; if(typeof v==='number'&&o.fmt!==false)x.numFmt=o.fmt||NUM; if(o.fill)x.fill={type:'pattern',pattern:'solid',fgColor:{argb:o.fill}}; return x}
+function mrg(ws,r1,c1,r2,c2,v,o={}){ws.mergeCells(r1,c1,r2,c2);const x=cell(ws,r1,c1,v,o);if(o.bd){for(let r=r1;r<=r2;r++)for(let c=c1;c<=c2;c++)ws.getCell(r,c).border=BRD}return x}
+function calcAll(){return S.calc.map(k=>{const nr=k.ot*S.nr/100,sp=k.ot*S.sp/100;return{...k,nr,sp,tot:k.direct+nr+sp}})}
+function sections(rows){const m=new Map();rows.forEach(k=>{if(!m.has(k.c.sec))m.set(k.c.sec,[]);m.get(k.c.sec).push(k)});return [...m]}
+const sum=(a,f)=>a.reduce((s,k)=>s+f(k),0);
+
+// Приложение № 3 к Методике 421/пр: ЛСР, ресурсно-индексный метод (рекомендуемый образец)
+function sheetLsr(wb){
+  const ws=wb.addWorksheet('ЛСР (РИМ)',{pageSetup:{orientation:'landscape',paperSize:9,fitToPage:true,fitToWidth:1,fitToHeight:0}});
+  [5,17,46,9,10,9,13,13,8,13,9,15].forEach((w,i)=>ws.getColumn(i+1).width=w);
+  mrg(ws,1,1,1,12,'ЛОКАЛЬНЫЙ СМЕТНЫЙ РАСЧЁТ (СМЕТА) № ЛС-02-01-01',{b:true,h:'center',size:11});
+  mrg(ws,2,1,2,12,$('#pName').value,{h:'center',ul:true}); mrg(ws,3,1,3,12,'(наименование работ и затрат, наименование объекта)',{h:'center',i:true,size:8});
+  cell(ws,4,1,'Составлен');cell(ws,4,3,'ресурсно-индексным методом',{b:true});
+  cell(ws,5,1,'Основание:'); mrg(ws,5,3,5,12,'',{ul:true}); mrg(ws,6,3,6,12,'(проектная и (или) иная техническая документация)',{h:'center',i:true,size:8});
+  cell(ws,7,1,'Составлен(а) в текущем уровне цен 3 кв. 2026 г. · '+($('#pReg').selectedOptions[0].text),{size:8});
+  const H=9; ws.getRow(H).height=26; ws.getRow(H+1).height=62;
+  [['№ п/п'],['Обоснование'],['Наименование работ и затрат'],['Единица измерения']].forEach((t,i)=>mrg(ws,H,i+1,H+1,i+1,t[0],{b:true,h:'center',bd:true}));
+  mrg(ws,H,5,H,7,'Количество',{b:true,h:'center',bd:true}); mrg(ws,H,8,H,12,'Сметная стоимость, руб.',{b:true,h:'center',bd:true});
+  ['на единицу измерения','коэффициенты','всего с учётом коэффициентов','на единицу измерения в базисном уровне цен','индекс','на единицу измерения в текущем уровне цен','коэффициенты','всего в текущем уровне цен'].forEach((t,i)=>cell(ws,H+1,5+i,t,{b:true,h:'center',bd:true,size:8}));
+  for(let c=1;c<=12;c++)cell(ws,H+2,c,c,{h:'center',bd:true,b:true,fmt:'0'});
+  let r=H+3; const rows=calcAll(), secs=sections(rows); let n=0; const T={};
+  const line=(a,o={})=>{for(let c=1;c<=12;c++){const v=a[c-1];cell(ws,r,c,v===undefined?'':v,{bd:true,b:o.b,i:o.i,h:c<=2||c===4?'center':(c===3?'left':undefined),fill:o.fill,fmt:(c===5||c===6||c===7)&&typeof v==='number'?'#,##0.00##':(c===9||c===11?'0.00':undefined)})}r++};
+  secs.forEach(([sec,arr],si)=>{
+    mrg(ws,r,1,r,12,`Раздел ${si+1}. ${sec}`,{b:true,bd:true,fill:'FFEDEDED'});r++;
+    arr.forEach(k=>{n++;const c=k.c,u=1/k.qty;
+      line([n,c.code,c.name,c.unit,k.qty,1,k.qty],{b:true});
+      line(['','1','ОТ (ЗТ)','чел.-ч','','','',c.fot,k.ix,c.fot*k.ix,1,k.ot]);
+      line(['','2','ЭМ','','','','',c.mach,k.ix,c.mach*k.ix,1,k.em]);
+      line(['','4','М','','','','',c.mat,k.ix,c.mat*k.ix,1,k.mt]);
+      line(['','','Итого прямые затраты','','','','','','','','',k.direct],{b:true});
+      line(['','','ФОТ','','','','','','','','',k.ot]);
+      line(['','Приказ Минстроя (демо)','НР общестроительные работы (демо)','%',S.nr,1,S.nr,'','','',1,k.nr]);
+      line(['','Приказ Минстроя (демо)','СП общестроительные работы (демо)','%',S.sp,1,S.sp,'','','',1,k.sp]);
+      line(['','','Всего по позиции','','','','','','',k.tot*u,'',k.tot],{b:true});
+    });
+    const t={dir:sum(arr,k=>k.direct),ot:sum(arr,k=>k.ot),em:sum(arr,k=>k.em),mt:sum(arr,k=>k.mt),nr:sum(arr,k=>k.nr),sp:sum(arr,k=>k.sp)};t.tot=t.dir+t.nr+t.sp;
+    for(const k in t)T[k]=(T[k]||0)+t[k];
+    const L=(txt,v,o)=>line(['','',txt,'','','','','','','','',v],o);
+    L(`Итого прямые затраты по разделу ${si+1}. ${sec}`,t.dir,{b:true});L('в том числе','',{i:true});L('оплата труда (ОТ)',t.ot);L('эксплуатация машин и механизмов',t.em);L('материальные ресурсы',t.mt);
+    L('Итого ФОТ',t.ot);L('Итого накладные расходы',t.nr);L('Итого сметная прибыль',t.sp);L(`Итого по разделу ${si+1}. ${sec}`,t.tot,{b:true,fill:'FFF5F5F5'});
+  });
+  const L=(txt,v,o)=>line(['','',txt,'','','','','','','','',v],o);
+  L('ИТОГИ ПО СМЕТЕ','',{b:true,fill:'FFEDEDED'});L('ВСЕГО строительные работы',T.tot,{b:true});L('в том числе','',{i:true});L('всего прямые затраты',T.dir);
+  L('оплата труда (ОТ)',T.ot);L('эксплуатация машин и механизмов',T.em);L('материальные ресурсы',T.mt);L('Итого ФОТ',T.ot);L('Итого накладные расходы',T.nr);L('Итого сметная прибыль',T.sp);
+  if(S.nds){L('НДС 20%',T.tot*.2);L('ВСЕГО по смете с НДС',T.tot*1.2,{b:true,fill:'FFFFF2CC'})}
+  r+=1; cell(ws,r,1,'Составил: ______________________ [должность, подпись (инициалы, фамилия)]',{size:9,wrap:false}); r+=2; cell(ws,r,1,'Проверил: ______________________ [должность, подпись (инициалы, фамилия)]',{size:9,wrap:false});
+  r+=2; cell(ws,r,1,'Демо-версия АСД: шифры, цены и объёмы условные. Структура формы: приложение № 3 к Методике, утв. приказом Минстроя России от 04.08.2020 № 421/пр.',{i:true,size:8,wrap:false});
+  ws.views=[{state:'frozen',ySplit:H+2}]; return T;
+}
+
+// шапка унифицированных форм КС-2 / КС-3 (Постановление Госкомстата России от 11.11.1999 № 100)
+function ksHeader(ws,n,form,ok,withObject){
+  const ro=n-1; let r=1;
+  mrg(ws,r,ro,r+2,n,`Унифицированная форма № ${form}\nУтверждена постановлением Госкомстата России от 11.11.1999 № 100`,{h:'right',size:8});r+=3;
+  cell(ws,r,ro,'Код',{h:'center',bd:true,b:true}); cell(ws,r,n,'',{bd:true}); r++;
+  cell(ws,r,ro,'Форма по ОКУД',{h:'right',bd:true}); cell(ws,r,n,ok,{h:'center',bd:true,b:true,fmt:false}); r++;
+  const rowsH=[['Инвестор','',true],['Заказчик (Генподрядчик)',$('#pZak').value,true],['Подрядчик (Субподрядчик)',$('#pPod').value,true],['Стройка',$('#pName').value,true]];
+  if(withObject)rowsH.push(['Объект',$('#pName').value,false]);
+  const cap={'Инвестор':'(организация, адрес, телефон, факс)','Заказчик (Генподрядчик)':'(организация, адрес, телефон, факс)','Подрядчик (Субподрядчик)':'(организация, адрес, телефон, факс)','Стройка':'(наименование, адрес)','Объект':'(наименование)'};
+  rowsH.forEach(([lab,val,okpo])=>{cell(ws,r,1,lab,{b:true,wrap:false});mrg(ws,r,2,r,ro-2,val,{ul:true});if(okpo){cell(ws,r,ro-1,'по ОКПО',{h:'right'});cell(ws,r,n,'',{bd:true})}r++;mrg(ws,r,2,r,ro-2,cap[lab],{h:'center',i:true,size:7});r++});
+  cell(ws,r,1,'Вид деятельности по ОКДП',{b:true,wrap:false});cell(ws,r,n,'',{bd:true});r++;
+  cell(ws,r,1,'Договор подряда (контракт)',{b:true,wrap:false});cell(ws,r,ro,'номер',{h:'right'});cell(ws,r,n,$('#pDog').value.split(' от ')[0]||'',{bd:true,h:'center'});r++;
+  cell(ws,r,ro,'дата',{h:'right'});cell(ws,r,n,($('#pDog').value.split(' от ')[1])||'',{bd:true,h:'center'});r++;
+  cell(ws,r,1,'Вид операции',{b:true,wrap:false});cell(ws,r,n,'',{bd:true});r+=2;
+  const d=new Date(),dd=`${D2(d.getDate())}.${D2(d.getMonth()+1)}.${d.getFullYear()}`,d1=`01.${D2(d.getMonth()+1)}.${d.getFullYear()}`;
+  mrg(ws,r,1,r+2,Math.max(2,ro-3),form==='КС-2'?'АКТ\nО ПРИЕМКЕ ВЫПОЛНЕННЫХ РАБОТ':'СПРАВКА\nО СТОИМОСТИ ВЫПОЛНЕННЫХ РАБОТ И ЗАТРАТ',{b:true,h:'center',size:11});
+  mrg(ws,r,ro-2,r+1,ro-2,'Номер документа',{h:'center',bd:true,b:true,size:8});mrg(ws,r,ro-1,r+1,ro-1,'Дата составления',{h:'center',bd:true,b:true,size:8});mrg(ws,r,ro,r,n,'Отчётный период',{h:'center',bd:true,b:true,size:8});
+  cell(ws,r+1,ro,'с',{h:'center',bd:true,b:true});cell(ws,r+1,n,'по',{h:'center',bd:true,b:true});
+  cell(ws,r+2,ro-2,'1',{h:'center',bd:true,fmt:false});cell(ws,r+2,ro-1,dd,{h:'center',bd:true});cell(ws,r+2,ro,d1,{h:'center',bd:true});cell(ws,r+2,n,dd,{h:'center',bd:true});
+  return r+4;
+}
+function signs(ws,r,n,left,right){[left,right].forEach(t=>{cell(ws,r,1,t+' ____________________',{b:true,wrap:false});cell(ws,r+1,2,'(должность)           (подпись)           (расшифровка подписи)',{i:true,size:7,wrap:false});cell(ws,r+2,1,'М.П.',{wrap:false});r+=4});return r}
+
+function sheetKs2(wb){
+  const ws=wb.addWorksheet('КС-2',{pageSetup:{orientation:'portrait',paperSize:9,fitToPage:true,fitToWidth:1,fitToHeight:0}});
+  [7,9,44,19,9,10,14,16].forEach((w,i)=>ws.getColumn(i+1).width=w);
+  let r=ksHeader(ws,8,'КС-2','0322005',true); const rows=calcAll(),total=sum(rows,k=>k.tot);
+  mrg(ws,r,1,r,7,'Сметная (договорная) стоимость в соответствии с договором подряда (субподряда), руб. (без НДС)',{wrap:false});cell(ws,r,8,total,{bd:true,b:true});r+=2;
+  ws.getRow(r).height=24;
+  mrg(ws,r,1,r,2,'Номер',{h:'center',b:true,bd:true});mrg(ws,r,3,r+1,3,'Наименование работ',{h:'center',b:true,bd:true});mrg(ws,r,4,r+1,4,'Номер единичной расценки',{h:'center',b:true,bd:true});mrg(ws,r,5,r+1,5,'Единица измерения',{h:'center',b:true,bd:true});mrg(ws,r,6,r,8,'Выполнено работ',{h:'center',b:true,bd:true});r++;
+  ws.getRow(r).height=36;
+  cell(ws,r,1,'по порядку',{h:'center',b:true,bd:true,size:8});cell(ws,r,2,'позиции по смете',{h:'center',b:true,bd:true,size:8});cell(ws,r,6,'количество',{h:'center',b:true,bd:true,size:8});cell(ws,r,7,'цена за единицу, руб.',{h:'center',b:true,bd:true,size:8});cell(ws,r,8,'стоимость, руб.',{h:'center',b:true,bd:true,size:8});r++;
+  for(let c=1;c<=8;c++)cell(ws,r,c,c,{h:'center',bd:true,b:true,fmt:'0'});r++;
+  rows.forEach((k,i)=>{const v=[i+1,i+1,k.c.name,k.c.code,k.c.unit,k.qty,k.tot/k.qty,k.tot];v.forEach((x,c)=>cell(ws,r,c+1,x,{bd:true,h:c<2||c===4?'center':undefined,fmt:c===0||c===1?'0':(c===5?'#,##0.00##':undefined)}));r++});
+  mrg(ws,r,1,r,3,'Итого',{b:true,bd:true});cell(ws,r,4,'',{bd:true});mrg(ws,r,5,r,7,'X',{h:'center',bd:true});cell(ws,r,8,total,{bd:true,b:true});r++;
+  mrg(ws,r,1,r,3,'Всего по акту',{b:true,bd:true});cell(ws,r,4,'',{bd:true});mrg(ws,r,5,r,7,'X',{h:'center',bd:true});cell(ws,r,8,total,{bd:true,b:true});r+=2;
+  signs(ws,r,8,'Сдал','Принял');
+  cell(ws,r+9,1,'Демо-версия АСД: шифры, цены и объёмы условные. Стоимость в акте указана без НДС (НДС показан в справке КС-3).',{i:true,size:8,wrap:false});
+}
+function sheetKs3(wb){
+  const ws=wb.addWorksheet('КС-3',{pageSetup:{orientation:'portrait',paperSize:9,fitToPage:true,fitToWidth:1,fitToHeight:0}});
+  [8,50,10,18,18,20].forEach((w,i)=>ws.getColumn(i+1).width=w);
+  let r=ksHeader(ws,6,'КС-3','0322001',false); const rows=calcAll(),total=sum(rows,k=>k.tot),nds=S.nds?total*.2:0;
+  ws.getRow(r).height=24;
+  mrg(ws,r,1,r+1,1,'Номер по порядку',{h:'center',b:true,bd:true,size:8});mrg(ws,r,2,r+1,2,'Наименование пусковых комплексов, этапов, объектов, видов выполненных работ, оборудования, затрат',{h:'center',b:true,bd:true});mrg(ws,r,3,r+1,3,'Код',{h:'center',b:true,bd:true});mrg(ws,r,4,r,6,'Стоимость выполненных работ и затрат, руб.',{h:'center',b:true,bd:true});r++;
+  ws.getRow(r).height=26;
+  ['с начала проведения работ','с начала года','в том числе за отчётный период'].forEach((t,i)=>cell(ws,r,4+i,t,{h:'center',b:true,bd:true,size:8}));r++;
+  for(let c=1;c<=6;c++)cell(ws,r,c,c,{h:'center',bd:true,b:true,fmt:'0'});r++;
+  const row=(a,o={})=>{a.forEach((v,c)=>cell(ws,r,c+1,v===undefined?'':v,{bd:true,b:o.b,h:c===0||c===2?'center':undefined,fmt:c===0&&typeof v==='number'?'0':undefined}));r++};
+  row(['','Всего работ и затрат, включаемых в стоимость работ','',total,total,total],{b:true});row(['','в том числе:','','','','']);
+  sections(rows).forEach(([sec,arr],i)=>{const t=sum(arr,k=>k.tot);row([i+1,sec,'',t,t,t])});
+  row(['','Итого','',total,total,total],{b:true});row(['','Сумма НДС'+(S.nds?' (20%)':' (без НДС)'),'',nds,nds,nds]);row(['','Всего с учётом НДС','',total+nds,total+nds,total+nds],{b:true});
+  r++;signs(ws,r,6,'Заказчик (Генподрядчик)','Подрядчик (Субподрядчик)');
+  cell(ws,r+9,1,'Демо-версия АСД: суммы условные. Данные КС-3 для первого отчётного периода: колонки 4, 5 и 6 совпадают.',{i:true,size:8,wrap:false});
+}
+async function xlsxExport(kind){
+  if(typeof ExcelJS==='undefined'){say('Не загрузилась библиотека Excel. Проверьте интернет и обновите страницу.');return}
+  if(kind==='lsr'&&!S.rim){say('В прототипе ЛСР выгружается по форме для ресурсно-индексного метода (приложение № 3). Переключите метод на РИМ и сформируйте смету заново. Форма для БИМ (приложение № 2) будет в рабочей версии.');return}
+  const wb=new ExcelJS.Workbook();wb.creator='АСД · Смета Онлайн';
+  if(kind==='lsr')sheetLsr(wb); if(kind==='ks2')sheetKs2(wb); if(kind==='ks3')sheetKs3(wb);
+  const buf=await wb.xlsx.writeBuffer(); window.__lastXlsx=buf;
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
+  a.download={lsr:'LSR_RIM_demo.xlsx',ks2:'KS-2_demo.xlsx',ks3:'KS-3_demo.xlsx'}[kind];a.click();
+  say({lsr:'Скачал ЛСР по образцу приложения № 3 к Методике 421/пр (РИМ).',ks2:'Скачал акт КС-2 по унифицированной форме (ОКУД 0322005).',ks3:'Скачал справку КС-3 по унифицированной форме (ОКУД 0322001).'}[kind]);
+}
 // экспорт (демо-файлы)
 function dl(name,text,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;a.click()}
 document.addEventListener('click',e=>{const x=e.target.dataset.ex;if(!x)return;
   if(!S){say('Сначала сформируйте смету.');return}
   const nm=$('#pName').value;
   if(x==='xml'){dl('smeta_demo.xml','<?xml version="1.0" encoding="UTF-8"?>\n<Smeta demo="true" name="'+nm+'" method="'+(S.rim?'RIM':'BIM')+'">\n'+S.rows.map((r,i)=>`  <Position n="${i+1}" code="${r.code}" unit="${r.unit}" qty="${r.qty}" price="${r.price.toFixed(2)}" sum="${r.sum.toFixed(2)}">${r.name}</Position>`).join('\n')+`\n  <Total>${S.sum.tot.toFixed(2)}</Total>\n</Smeta>`,'application/xml')}
-  if(x==='xls'){dl('smeta_demo.xls','<meta charset="utf-8"><table border=1><tr><th>№</th><th>Обоснование</th><th>Наименование</th><th>Ед.</th><th>Кол-во</th><th>Цена</th><th>Сумма</th></tr>'+S.rows.map((r,i)=>`<tr><td>${i+1}</td><td>${r.code}</td><td>${r.name}</td><td>${r.unit}</td><td>${r.qty}</td><td>${r.price.toFixed(2)}</td><td>${r.sum.toFixed(2)}</td></tr>`).join('')+`<tr><td colspan=6>ИТОГО</td><td>${S.sum.tot.toFixed(2)}</td></tr></table>`,'application/vnd.ms-excel')}
+  if(x==='lsr'||x==='ks2'||x==='ks3'){xlsxExport(x);return}
+  if(x==='xls_old'){dl('smeta_demo.xls','<meta charset="utf-8"><table border=1><tr><th>№</th><th>Обоснование</th><th>Наименование</th><th>Ед.</th><th>Кол-во</th><th>Цена</th><th>Сумма</th></tr>'+S.rows.map((r,i)=>`<tr><td>${i+1}</td><td>${r.code}</td><td>${r.name}</td><td>${r.unit}</td><td>${r.qty}</td><td>${r.price.toFixed(2)}</td><td>${r.sum.toFixed(2)}</td></tr>`).join('')+`<tr><td colspan=6>ИТОГО</td><td>${S.sum.tot.toFixed(2)}</td></tr></table>`,'application/vnd.ms-excel')}
 });
 </script>
 </body>
