@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Смета Онлайн — АСД</title>
+<style>
+:root{--bg:#0d1226;--panel:#151b36;--panel2:#1b2344;--line:#2a3560;--tx:#e8ecf8;--mut:#9aa6c4;--acc:#ff2c69;--blue:#9fb4ff;--gold:#ffd166;--ok:#13cc88}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:Inter,Arial,Helvetica,sans-serif;font-size:14px;line-height:1.45}
+button,input,select,textarea{font:inherit;color:inherit}
+header{display:flex;align-items:center;gap:16px;padding:12px 20px;border-bottom:1px solid var(--line);background:var(--panel);position:sticky;top:0;z-index:5;flex-wrap:wrap}
+.logo{font-weight:800;font-size:17px}.logo b{color:var(--acc)}
+nav{display:flex;gap:4px;margin-left:12px}
+nav button{background:none;border:0;padding:8px 14px;border-radius:8px;color:var(--mut);cursor:pointer;font-weight:600}
+nav button.on{background:var(--panel2);color:var(--tx)}
+.user{margin-left:auto;display:flex;align-items:center;gap:10px;color:var(--mut)}
+.av{width:30px;height:30px;border-radius:50%;background:var(--acc);display:grid;place-items:center;color:#fff;font-weight:700}
+.demo{background:#3a2d0a;color:var(--gold);padding:6px 20px;font-size:12px;text-align:center}
+main{padding:16px 20px;max-width:1500px;margin:0 auto}
+.view{display:none}.view.on{display:block}
+.grid{display:grid;grid-template-columns:270px minmax(0,1fr) 340px;gap:14px;align-items:start}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px}
+.card h3{margin:0 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--blue)}
+label{display:block;font-size:12px;color:var(--mut);margin:10px 0 4px}
+input,select,textarea{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--blue)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.btn{background:var(--acc);border:0;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer;color:#fff}
+.btn.ghost{background:var(--panel2);border:1px solid var(--line);color:var(--tx)}
+.btn.sm{padding:6px 10px;font-size:12px;border-radius:8px}
+.full{width:100%;margin-top:14px}
+.bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.bar .sp{flex:1}
+.chip{display:inline-block;padding:2px 8px;border-radius:99px;background:var(--panel2);border:1px solid var(--line);font-size:11px;color:var(--mut)}
+.chip.ok{color:var(--ok);border-color:#0f6b4b}.chip.warn{color:var(--gold);border-color:#6b5612}
+.tw{overflow:auto;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;min-width:720px}
+th,td{padding:7px 9px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{background:var(--panel2);font-size:11px;color:var(--mut);text-transform:uppercase;letter-spacing:.04em;position:sticky;top:0}
+td.n,th.n{text-align:right;white-space:nowrap}
+tr.sec td{background:#10163040;color:var(--blue);font-weight:700}
+tr.tot td{font-weight:700}tr.tot.big td{font-size:15px;color:var(--gold);border-top:2px solid var(--line)}
+tr.flash td{animation:fl 1.6s}@keyframes fl{from{background:#ff2c6955}to{background:transparent}}
+.code{font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--blue)}
+.rim{color:var(--gold);font-size:11px}
+.chat{display:flex;flex-direction:column;height:calc(100vh - 150px);min-height:480px}
+.msgs{flex:1;overflow:auto;display:flex;flex-direction:column;gap:8px;padding-right:4px}
+.m{padding:9px 11px;border-radius:12px;max-width:94%;white-space:pre-wrap}
+.m.bot{background:var(--panel2);border:1px solid var(--line)}
+.m.me{background:#3a1a2c;border:1px solid #6b2442;align-self:flex-end}
+.rem{border:1px solid var(--line);background:#10163066;border-radius:10px;padding:8px 10px;margin-top:6px}
+.rem p{margin:0 0 6px}
+.sugg{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+.sugg button{background:var(--panel2);border:1px solid var(--line);border-radius:99px;padding:4px 10px;font-size:12px;cursor:pointer;color:var(--mut)}
+.sugg button:hover{color:var(--tx);border-color:var(--blue)}
+.send{display:flex;gap:8px}
+.empty{padding:50px 20px;text-align:center;color:var(--mut)}
+.qa{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:14px;max-width:1100px;margin:0 auto}
+.src{display:block;border:1px solid var(--line);border-left:3px solid var(--blue);background:#10163066;border-radius:8px;padding:8px 10px;margin-top:6px;font-size:13px}
+.src small{color:var(--mut);display:block}
+.src.court{border-left-color:var(--gold)}.src.fgis{border-left-color:var(--ok)}
+.steps{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;font-size:12px;color:var(--mut)}
+.steps span{padding:2px 8px;border-radius:6px;background:var(--panel2)}.steps .a{color:#fff;background:var(--acc)}
+.foot{color:var(--mut);font-size:12px;padding:20px;text-align:center}
+@media(max-width:1100px){.grid,.qa{grid-template-columns:1fr}.chat{height:520px}}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">АСД <b>·</b> Смета Онлайн</div>
+  <nav><button class="on" data-v="est">Смета</button><button data-v="qa">Вопрос-ответ</button><button data-v="my">Мои сметы</button></nav>
+  <div class="user"><span class="chip ok">Тариф «Ученик АСД»</span><div class="av">И</div></div>
+</header>
+<div class="demo">Визуальный прототип. Шифры, цены и объёмы условные, это не расчёт. Источники в «Вопрос-ответ» показаны для примера.</div>
+
+<main>
+<!-- СМЕТА -->
+<section class="view on" id="v-est">
+ <div class="grid">
+  <div class="card">
+    <h3>1. Параметры</h3>
+    <div class="steps"><span class="a">Параметры</span><span>Смета</span><span>Правки</span><span>Экспорт</span></div>
+    <label>Название объекта</label><input id="pName" value="Ремонт офиса, 2 этаж">
+    <label>Вид работ</label>
+    <select id="pType"><option>Капитальный ремонт нежилых зданий</option><option>Новое строительство</option><option>Реконструкция</option></select>
+    <label>Регион (ФГИС ЦС)</label>
+    <select id="pReg"><option value="1">Республика Татарстан</option><option value="1.12">Москва</option><option value="1.08">Санкт-Петербург</option><option value="0.96">Краснодарский край</option></select>
+    <label>Метод расчёта</label>
+    <select id="pMeth"><option>Ресурсно-индексный (РИМ)</option><option>Базисно-индексный (БИМ)</option></select>
+    <div class="row2"><div><label>Нормативная база</label><select><option>ФСНБ-2022, Изм. 9</option></select></div><div><label>Квартал цен</label><select><option>3 кв. 2026</option></select></div></div>
+    <div class="row2"><div><label>НР, % от ФОТ</label><input id="pNr" type="number" value="90"></div><div><label>СП, % от ФОТ</label><input id="pSp" type="number" value="50"></div></div>
+    <label>Площадь помещений, м²</label><input id="pArea" type="number" value="92">
+    <label>Состав работ (выберите)</label>
+    <select id="pWorks" multiple size="4"><option selected>Демонтаж</option><option selected>Полы</option><option selected>Стены и потолки</option><option>Электрика</option></select>
+    <label style="display:flex;gap:8px;align-items:center"><input id="pNds" type="checkbox" style="width:auto" checked> НДС 20%</label>
+    <button class="btn full" id="gen">Сформировать смету</button>
+  </div>
+
+  <div class="card">
+    <div class="bar">
+      <h3 style="margin:0">2. Локальный сметной расчёт (ЛСР)</h3><span class="chip warn" id="mChip">РИМ</span><span class="sp"></span>
+      <button class="btn ghost sm" data-ex="xml">Экспорт XML</button>
+      <button class="btn ghost sm" data-ex="xls">Печать в Excel</button>
+    </div>
+    <div id="estWrap"><div class="empty">Заполните параметры слева и нажмите «Сформировать смету».<br>Дальше правки вносятся через чат справа.</div></div>
+  </div>
+
+  <div class="card chat">
+    <h3>3. Помощник по правкам</h3>
+    <div class="msgs" id="msgs"><div class="m bot">Здравствуйте! Сформируйте смету, и я покажу, что в ней стоит поправить, добавить или проверить. Правки пишите обычным текстом.</div></div>
+    <div class="sugg" id="sugg"></div>
+    <div class="send"><input id="inp" placeholder="Например: увеличь объём стяжки до 100"><button class="btn" id="go">→</button></div>
+  </div>
+ </div>
+</section>
+
+<!-- ВОПРОС-ОТВЕТ -->
+<section class="view" id="v-qa">
+ <div class="qa">
+  <div class="card chat" style="height:calc(100vh - 150px)">
+    <h3>Вопрос-ответ по сметному делу</h3>
+    <div class="msgs" id="qmsgs"><div class="m bot">Задайте вопрос по сметам. Отвечаю со ссылками на приказы Минстроя, ФГИС ЦС и судебную практику.</div></div>
+    <div class="sugg" id="qsugg"></div>
+    <div class="send"><input id="qinp" placeholder="Ваш вопрос…"><button class="btn" id="qgo">→</button></div>
+  </div>
+  <div class="card"><h3>Откуда ответы</h3>
+    <span class="src">Федеральный реестр сметных нормативов<small>ФГИС ЦС: нормы, цены, индексы</small></span>
+    <span class="src">Методика 421/пр<small>Приказ Минстроя России от 04.08.2020</small></span>
+    <span class="src court">Судебная практика<small>Решения по спорам о сметной стоимости</small></span>
+    <span class="src fgis">Письма Минстроя<small>Разъяснения по применению норм</small></span>
+    <p style="color:var(--mut);font-size:12px">Каждый ответ содержит ссылку на пункт документа. Нет источника, значит нет ответа.</p>
+  </div>
+ </div>
+</section>
+
+<!-- МОИ СМЕТЫ -->
+<section class="view" id="v-my">
+ <div class="card" style="max-width:900px;margin:0 auto"><h3>Мои сметы</h3>
+  <div class="tw"><table style="min-width:0"><tr><th>Объект</th><th>Метод</th><th>Сумма</th><th>Изменена</th></tr>
+  <tr><td>Склад, кровля</td><td>РИМ</td><td class="n">2 184 300 ₽</td><td>21.10.2026</td></tr>
+  <tr><td>Школа №14, капремонт</td><td>РИМ</td><td class="n">7 902 150 ₽</td><td>14.10.2026</td></tr>
+  <tr><td>Квартира, отделка</td><td>БИМ</td><td class="n">612 000 ₽</td><td>02.10.2026</td></tr></table></div>
+ </div>
+</section>
+</main>
+<div class="foot">АСД · Академия Сметного Дела · прототип сервиса</div>
+
+<script>
+const $=s=>document.querySelector(s), fmt=n=>n.toLocaleString('ru-RU',{minimumFractionDigits:2,maximumFractionDigits:2});
+// каталог условных позиций: fot, mat, mach — цена за единицу в базисе, ×индекс региона
+const CAT={
+ demont:{code:'ФЕРр 61-01-001 (демо)',name:'Демонтаж покрытия пола из плитки',unit:'м²',fot:310,mat:0,mach:40,sec:'Демонтаж',kw:['демонтаж']},
+ styazhka:{code:'11-01-011-01 (демо)',name:'Устройство стяжки цементной толщиной 40 мм',unit:'м²',fot:260,mat:430,mach:55,sec:'Полы',kw:['стяжк']},
+ grunt:{code:'11-01-002-01 (демо)',name:'Грунтование основания под покрытие',unit:'м²',fot:35,mat:48,mach:5,sec:'Полы',kw:['грунт']},
+ plitka:{code:'11-01-027-03 (демо)',name:'Устройство покрытий из керамогранита',unit:'м²',fot:520,mat:1650,mach:30,sec:'Полы',kw:['плитк','керамогран']},
+ shtuk:{code:'15-02-016-01 (демо)',name:'Штукатурка стен гипсовая по маякам',unit:'м²',fot:410,mat:290,mach:35,sec:'Стены и потолки',kw:['штукат']},
+ mus:{code:'01-01-... (демо)',name:'Погрузка и вывоз строительного мусора',unit:'т',fot:150,mat:0,mach:1250,sec:'Прочее',kw:['мусор','вывоз']}
+};
+let S=null; // состояние сметы
+function idx(){return parseFloat($('#pReg').value)}
+function build(){
+  const A=+$('#pArea').value||92;
+  S={items:[],nr:+$('#pNr').value,sp:+$('#pSp').value,nds:$('#pNds').checked,rim:$('#pMeth').value.includes('РИМ'),area:A,added:null};
+  addItem('demont',A); addItem('styazhka',Math.round(A*.92)); addItem('grunt',A); addItem('plitka',A); addItem('shtuk',Math.round(A*2.4));
+  render();
+  $('#mChip').textContent=S.rim?'РИМ':'БИМ';
+  botRemarks();
+}
+function addItem(k,q){const c=CAT[k];S.items.push({k,qty:q,idx:/ремон|стяж|штук/.test(c.name.toLowerCase())?1.0:1.0})}
+function render(){
+  const ix=idx(); let n=0,html='',sec='',dir=0,fot=0,mat=0,mach=0;
+  S.items.sort((a,b)=>CAT[a.k].sec.localeCompare(CAT[b.k].sec,'ru'));
+  S.items.forEach(it=>{const c=CAT[it.k];
+    if(c.sec!==sec){sec=c.sec;html+=`<tr class="sec"><td colspan="7">Раздел: ${sec}</td></tr>`}
+    n++; const price=(c.fot+c.mat+c.mach)*ix, sum=price*it.qty; dir+=sum; fot+=c.fot*ix*it.qty; mat+=c.mat*ix*it.qty; mach+=c.mach*ix*it.qty;
+    const rimTag=(S.rim&&c.mat>1000)?' <span class="rim" title="В ФГИС ЦС нет цены, применён индекс к группе ресурсов">индекс РИМ</span>':'';
+    html+=`<tr data-k="${it.k}" class="${S.added===it.k?'flash':''}"><td>${n}</td><td class="code">${c.code}</td><td>${c.name}${rimTag}</td><td>${c.unit}</td><td class="n">${it.qty}</td><td class="n">${fmt(price)}</td><td class="n">${fmt(sum)}</td></tr>`;
+  });
+  const nr=fot*S.nr/100, sp=fot*S.sp/100, sub=dir+nr+sp, nds=S.nds?sub*.2:0, tot=sub+nds;
+  S.total=tot; S.rows=S.items.map(it=>{const c=CAT[it.k],p=(c.fot+c.mat+c.mach)*ix;return{code:c.code,name:c.name,unit:c.unit,qty:it.qty,price:p,sum:p*it.qty}});S.sum={dir,nr,sp,nds,tot};
+  html+=`<tr class="tot"><td colspan="6">Прямые затраты (оплата труда, машины, материалы)</td><td class="n">${fmt(dir)}</td></tr>
+  <tr class="tot"><td colspan="6">Накладные расходы, ${S.nr}% от ФОТ</td><td class="n">${fmt(nr)}</td></tr>
+  <tr class="tot"><td colspan="6">Сметная прибыль, ${S.sp}% от ФОТ</td><td class="n">${fmt(sp)}</td></tr>
+  ${S.nds?`<tr class="tot"><td colspan="6">НДС 20%</td><td class="n">${fmt(nds)}</td></tr>`:''}
+  <tr class="tot big"><td colspan="6">ИТОГО по смете</td><td class="n">${fmt(tot)} ₽</td></tr>`;
+  $('#estWrap').innerHTML=`<div class="tw"><table><tr><th>№</th><th>Обоснование</th><th>Наименование работ и затрат</th><th>Ед.</th><th class="n">Кол-во</th><th class="n">Цена, ₽</th><th class="n">Стоимость, ₽</th></tr>${html}</table></div>`;
+}
+// чат
+function say(t,cls='bot',html){const d=document.createElement('div');d.className='m '+cls;if(html)d.innerHTML=t;else d.textContent=t;$('#msgs').appendChild(d);$('#msgs').scrollTop=1e9;return d}
+function botRemarks(){
+  const d=say(`Смета собрана: ${S.items.length} позиций. Что я бы поправил:
+<div class="rem"><p><b>1.</b> Объём стяжки ${Math.round(S.area*.92)} м² меньше площади пола ${S.area} м². Выровнять?</p><button class="btn sm" data-a="vol">Привести к ${S.area} м²</button></div>
+<div class="rem"><p><b>2.</b> Не учтён вывоз строительного мусора после демонтажа.</p><button class="btn sm" data-a="mus">Добавить позицию</button></div>
+<div class="rem"><p><b>3.</b> Для керамогранита нет цены в ФГИС ЦС, применён индекс (РИМ). Нужен конъюнктурный анализ или подтверждение.</p><button class="btn ghost sm" data-a="qa">Спросить в «Вопрос-ответ»</button></div>`,'bot',true);
+  $('#sugg').innerHTML=['Добавь вывоз мусора','Убери НДС','Увеличь объём плитки до 100','Что с индексом РИМ?'].map(t=>`<button>${t}</button>`).join('');
+}
+$('#msgs').addEventListener('click',e=>{const a=e.target.dataset.a;if(!a)return;
+  if(a==='vol'){const it=S.items.find(i=>i.k==='styazhka');it.qty=S.area;S.added='styazhka';render();say('Готово: объём стяжки '+S.area+' м². Итог пересчитан.')}
+  if(a==='mus'){if(!S.items.find(i=>i.k==='mus')){addItem('mus',6);S.added='mus';render();say('Добавил вывоз мусора, 6 т (условно). Проверьте объём по ведомости демонтажа.')}}
+  if(a==='qa'){goQa('Что делать, если в ФГИС ЦС нет цены на материал при РИМ?')}
+});
+function chat(t){
+  say(t,'me'); const l=t.toLowerCase(); const num=(l.match(/\d+/)||[])[0];
+  if(!S){say('Сначала сформируйте смету слева.');return}
+  const hit=Object.keys(CAT).find(k=>CAT[k].kw.some(w=>l.includes(w)));
+  if(/ндс/.test(l)){S.nds=/(убер|без|выключ|не нужен)/.test(l)?false:!S.nds;$('#pNds').checked=S.nds;render();say(S.nds?'НДС 20% включён.':'НДС убран из итога.');return}
+  if(/(добав|включ)/.test(l)&&hit){if(S.items.find(i=>i.k===hit)){say('Эта позиция уже есть. Могу поменять объём.');return}addItem(hit,+num||S.area);S.added=hit;render();say(`Добавил: ${CAT[hit].name}, ${+num||S.area} ${CAT[hit].unit}.`);return}
+  if(/(удал|убер)/.test(l)&&hit){S.items=S.items.filter(i=>i.k!==hit);render();say('Позицию удалил, итог пересчитан.');return}
+  if(/(объ[её]м|увелич|уменьш|измени)/.test(l)&&hit&&num){const it=S.items.find(i=>i.k===hit);if(!it){say('Такой позиции в смете нет. Добавить?');return}it.qty=+num;S.added=hit;render();say(`Объём изменён на ${num} ${CAT[hit].unit}. Итог: ${fmt(S.sum.tot)} ₽.`);return}
+  if(/(индекс|рим|цен)/.test(l)){say('Для ресурсов без цены во ФГИС ЦС применяется индекс к группе однородных ресурсов (Методика 421/пр, гл. V). Такие строки помечены «индекс РИМ». Подробнее в «Вопрос-ответ».');return}
+  say('Не нашёл, что менять. Примеры: «увеличь объём стяжки до 100», «добавь грунтование», «убери НДС», «удали штукатурку».');
+}
+function send(){const v=$('#inp').value.trim();if(v){$('#inp').value='';chat(v)}}
+$('#go').onclick=send;$('#inp').onkeydown=e=>{if(e.key==='Enter')send()};
+$('#sugg').onclick=e=>{if(e.target.tagName==='BUTTON')chat(e.target.textContent)};
+$('#gen').onclick=build;
+$('#pReg').onchange=()=>{if(S){render();say('Регион изменён, цены пересчитаны по индексу региона. Итог: '+fmt(S.sum.tot)+' ₽.')}};
+// вкладки
+function tab(v){document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));document.querySelectorAll('.view').forEach(x=>x.classList.toggle('on',x.id==='v-'+v))}
+document.querySelector('nav').onclick=e=>{if(e.target.dataset.v)tab(e.target.dataset.v)};
+// вопрос-ответ
+const QA=[
+ {q:/(нет цены|отсутств).*(фгис|материал)|индекс/i,a:'Если во ФГИС ЦС нет текущей цены материала, его цену определяют как произведение базисной цены и индекса к группе однородных ресурсов. Индексы публикуются на сайте ФГИС ЦС ежеквартально по субъектам РФ. Если нет и индекса, нужен конъюнктурный анализ (не менее трёх предложений).',s:[['Методика 421/пр, пп. 93–98','Глава V: особенности РИМ','b'],['ФГИС ЦС, раздел «Сметные цены и индексы»','Сплит-формы по кварталам и регионам','fgis']]},
+ {q:/нмцк|начальн.*цен/i,a:'НМЦК при проектно-сметном методе определяется на основании сметы, составленной по правилам Методики. Расчёт ведут в текущем уровне цен на дату подготовки закупки, документ оформляют по утверждённой форме.',s:[['Методика 421/пр','Определение сметной стоимости, формы документов','b'],['Практика ФАС и судов','Споры об обосновании НМЦК сметой','court']]},
+ {q:/нр|накладн|сп\b|прибыл/i,a:'Накладные расходы и сметную прибыль начисляют по нормативам Минстроя от фонда оплаты труда по видам работ. Нормативы утверждены отдельными приказами, их нужно применять с учётом вида работ и поправок.',s:[['Приказы Минстроя о НР и СП','Нормы по видам строительных работ','b'],['Методика 421/пр','Порядок начисления','b']]}
+];
+function qa(t){
+  const q=document.createElement('div');q.className='m me';q.textContent=t;$('#qmsgs').appendChild(q);
+  const r=QA.find(x=>x.q.test(t));const d=document.createElement('div');d.className='m bot';
+  d.innerHTML=r?`${r.a}${r.s.map(s=>`<span class="src ${s[2]==='b'?'':s[2]}"><b>${s[0]}</b><small>${s[1]}</small></span>`).join('')}`:'В прототипе подключено три примера вопросов. В рабочей версии ответ будет собираться из базы нормативов с обязательной ссылкой на пункт документа.';
+  $('#qmsgs').appendChild(d);$('#qmsgs').scrollTop=1e9;
+}
+function goQa(t){tab('qa');qa(t)}
+$('#qsugg').innerHTML=['Что делать, если во ФГИС ЦС нет цены материала?','Как обосновать НМЦК сметой?','Как начисляются НР и СП?'].map(t=>`<button>${t}</button>`).join('');
+$('#qsugg').onclick=e=>{if(e.target.tagName==='BUTTON')qa(e.target.textContent)};
+function qsend(){const v=$('#qinp').value.trim();if(v){$('#qinp').value='';qa(v)}}
+$('#qgo').onclick=qsend;$('#qinp').onkeydown=e=>{if(e.key==='Enter')qsend()};
+// экспорт (демо-файлы)
+function dl(name,text,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;a.click()}
+document.addEventListener('click',e=>{const x=e.target.dataset.ex;if(!x)return;
+  if(!S){say('Сначала сформируйте смету.');return}
+  const nm=$('#pName').value;
+  if(x==='xml'){dl('smeta_demo.xml','<?xml version="1.0" encoding="UTF-8"?>\n<Smeta demo="true" name="'+nm+'" method="'+(S.rim?'RIM':'BIM')+'">\n'+S.rows.map((r,i)=>`  <Position n="${i+1}" code="${r.code}" unit="${r.unit}" qty="${r.qty}" price="${r.price.toFixed(2)}" sum="${r.sum.toFixed(2)}">${r.name}</Position>`).join('\n')+`\n  <Total>${S.sum.tot.toFixed(2)}</Total>\n</Smeta>`,'application/xml')}
+  if(x==='xls'){dl('smeta_demo.xls','<meta charset="utf-8"><table border=1><tr><th>№</th><th>Обоснование</th><th>Наименование</th><th>Ед.</th><th>Кол-во</th><th>Цена</th><th>Сумма</th></tr>'+S.rows.map((r,i)=>`<tr><td>${i+1}</td><td>${r.code}</td><td>${r.name}</td><td>${r.unit}</td><td>${r.qty}</td><td>${r.price.toFixed(2)}</td><td>${r.sum.toFixed(2)}</td></tr>`).join('')+`<tr><td colspan=6>ИТОГО</td><td>${S.sum.tot.toFixed(2)}</td></tr></table>`,'application/vnd.ms-excel')}
+});
+</script>
+</body>
+</html>
